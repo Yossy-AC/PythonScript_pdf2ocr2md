@@ -4,99 +4,75 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PDF→Markdown 変換</title>
+    <script>
+    (function(){var t=localStorage.getItem("portal-theme");if(!t)t=window.matchMedia&&window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";document.documentElement.setAttribute("data-theme",t)})();
+    </script>
+    <link rel="stylesheet" href="/portal-assets/portal.css">
     <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            background: #f5f5f5;
-            color: #333;
-            padding: 2rem 1rem;
-        }
-        .container { max-width: 800px; margin: 0 auto; }
-        h1 { font-size: 1.4rem; font-weight: 600; margin-bottom: 0.25rem; }
-        .subtitle { color: #666; font-size: 0.85rem; margin-bottom: 2rem; }
+        .page-container { max-width: 800px; margin: 0 auto; padding: 2rem 1.5rem; }
+        .page-title { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 0.25rem; }
+        .page-subtitle { color: var(--p-text-secondary); font-size: 0.9rem; margin-bottom: 2rem; }
         .card {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            background: var(--p-surface);
+            border: 0.5px solid var(--p-border-light);
+            border-radius: var(--p-radius);
             padding: 1.75rem;
             margin-bottom: 1.25rem;
         }
         .card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; }
         .upload-area {
-            border: 2px dashed #ddd;
-            border-radius: 6px;
+            border: 2px dashed var(--p-border);
+            border-radius: var(--p-radius-sm);
             padding: 1.5rem;
             text-align: center;
             cursor: pointer;
-            transition: border-color 0.15s, background 0.15s;
+            transition: all var(--p-transition);
         }
-        .upload-area:hover { border-color: #2563eb; background: #eff6ff; }
+        .upload-area:hover { border-color: var(--p-accent); background: rgba(0,113,227,0.04); }
+        [data-theme="dark"] .upload-area:hover { background: rgba(41,151,255,0.06); }
         .upload-area input[type="file"] { display: none; }
-        .upload-area label { display: block; cursor: pointer; color: #666; font-size: 0.9rem; }
-        .upload-area .filename {
-            margin-top: 0.5rem; font-size: 0.85rem;
-            color: #2563eb; font-weight: 500;
-        }
-        .btn {
-            display: inline-block;
-            padding: 0.55rem 1.25rem;
-            border: none; border-radius: 6px;
-            font-size: 0.9rem; font-weight: 500;
-            cursor: pointer; transition: background 0.15s;
-        }
-        .btn-primary { background: #2563eb; color: white; }
-        .btn-primary:hover { background: #1d4ed8; }
-        .btn-primary:disabled { background: #93c5fd; cursor: not-allowed; }
+        .upload-area label { display: block; cursor: pointer; color: var(--p-text-secondary); font-size: 0.9rem; }
+        .upload-area .filename { margin-top: 0.5rem; font-size: 0.85rem; color: var(--p-accent); font-weight: 500; }
         .btn-row { margin-top: 1rem; display: flex; gap: 0.75rem; align-items: center; }
-        .warn-box {
-            background: #fffbeb; border: 1px solid #fcd34d;
-            border-radius: 6px; padding: 0.75rem 1rem;
-            font-size: 0.85rem; color: #92400e; margin-bottom: 1rem;
-        }
-        .spinner {
-            display: none;
-            width: 18px; height: 18px;
-            border: 2px solid #e5e7eb;
-            border-top-color: #2563eb;
-            border-radius: 50%;
-            animation: spin 0.7s linear infinite;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .htmx-request .spinner { display: inline-block; }
-        .htmx-request #submit-btn { display: none; }
-        .htmx-request .upload-hint { display: none; }
-
-        /* ログ表 */
-        table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
-        th { background: #f9fafb; font-weight: 600; text-align: left;
-             padding: 0.5rem 0.75rem; border-bottom: 1px solid #e5e7eb; }
-        td { padding: 0.45rem 0.75rem; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
-        .badge {
-            display: inline-block;
-            padding: 0.15rem 0.5rem; border-radius: 4px;
-            font-size: 0.75rem; font-weight: 500;
-        }
-        .badge-ok { background: #d1fae5; color: #065f46; }
-        .badge-warn { background: #fef3c7; color: #92400e; }
-        .badge-err { background: #fee2e2; color: #991b1b; }
-        .cost-row { font-size: 0.8rem; color: #666; margin-top: 0.5rem; }
-        a.back { font-size: 0.85rem; color: #666; text-decoration: none; }
-        a.back:hover { color: #333; }
-        a.dl-link { color: #2563eb; font-size: 0.82rem; text-decoration: none; }
+        .cost-row { font-size: 0.8rem; color: var(--p-text-secondary); margin-top: 0.5rem; }
+        a.dl-link { color: var(--p-accent); font-size: 0.82rem; text-decoration: none; }
         a.dl-link:hover { text-decoration: underline; }
         #result { margin-top: 0; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <a class="back" href="/auth/logout">← ログアウト</a>
-        <h1 style="margin-top: 0.75rem;">PDF → Markdown 変換</h1>
-        <p class="subtitle">大学入試問題 PDF を Gemini 2.5 Flash で Markdown に変換します</p>
+    <!-- Navigation -->
+    <nav class="portal-nav">
+        <div class="portal-nav-inner">
+            <a href="/" class="portal-nav-brand">Yossy Portal</a>
+            <ul class="portal-nav-links">
+                <li><a href="/">ホーム</a></li>
+                <li><a href="/staff/admin">成績管理</a></li>
+                <li><a href="/staff/exam/">入試分析</a></li>
+                <li><a href="/staff/goukaku/">合格実績</a></li>
+                <li><a href="/auth/logout" class="portal-nav-logout">ログアウト</a></li>
+            </ul>
+            <button class="portal-theme-toggle" aria-label="テーマ切替">&#9790;</button>
+            <button class="portal-hamburger" aria-label="メニュー" aria-expanded="false">
+                <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 5h14a1 1 0 010 2H3a1 1 0 010-2zm0 4h14a1 1 0 010 2H3a1 1 0 010-2zm0 4h14a1 1 0 010 2H3a1 1 0 010-2z"/></svg>
+            </button>
+        </div>
+    </nav>
+    <div class="portal-mobile-menu">
+        <a href="/">ホーム</a>
+        <a href="/staff/admin">成績管理</a>
+        <a href="/staff/exam/">入試分析</a>
+        <a href="/staff/goukaku/">合格実績</a>
+        <a href="/auth/logout" class="portal-nav-logout">ログアウト</a>
+    </div>
+
+    <div class="page-container">
+        <h1 class="page-title">PDF → Markdown 変換</h1>
+        <p class="page-subtitle">大学入試問題 PDF を Gemini 2.5 Flash で Markdown に変換します</p>
 
         {% if not api_ok %}
-        <div class="warn-box">
+        <div class="portal-warn">
             GEMINI_API_KEY が設定されていません。環境変数を設定してサービスを再起動してください。
         </div>
         {% endif %}
@@ -104,32 +80,21 @@
         <!-- アップロードフォーム -->
         <div class="card">
             <h2>PDFアップロード</h2>
-            <p style="font-size:0.82rem; color:#666; margin-bottom:1rem;">
-                ファイル名パターン: <code>YYYY大学名_問題.pdf</code>（例: 2025大阪大（外国語以外）_問題.pdf）<br>
+            <p style="font-size:0.82rem; color:var(--p-text-secondary); margin-bottom:1rem;">
+                ファイル名パターン: <code style="background:var(--p-bg-secondary); padding:0.1rem 0.4rem; border-radius:4px;">YYYY大学名_問題.pdf</code><br>
                 変換には数十秒かかります。完了まで待機してください。
             </p>
-            <form
-                hx-post="upload"
-                hx-target="#result"
-                hx-swap="innerHTML"
-                hx-encoding="multipart/form-data"
-                hx-indicator="#form-indicator"
-                id="upload-form"
-            >
+            <form hx-post="upload" hx-target="#result" hx-swap="innerHTML"
+                  hx-encoding="multipart/form-data" hx-indicator="#form-indicator" id="upload-form">
                 <div class="upload-area" onclick="document.getElementById('file-input').click()">
-                    <input type="file" id="file-input" name="file" accept=".pdf"
-                           onchange="updateFilename(this)">
-                    <label for="file-input" class="upload-hint">
-                        クリックして PDF を選択
-                    </label>
+                    <input type="file" id="file-input" name="file" accept=".pdf" onchange="updateFilename(this)">
+                    <label for="file-input" class="upload-hint">クリックして PDF を選択</label>
                     <div class="filename" id="filename-display" style="display:none;"></div>
                 </div>
                 <div class="btn-row" id="form-indicator">
-                    <button type="submit" class="btn btn-primary" id="submit-btn"
+                    <button type="submit" class="portal-btn portal-btn-primary" id="submit-btn"
                             {% if not api_ok %}disabled{% else %}disabled{% endif %}>変換する</button>
-                    <div class="spinner"></div>
-                    <span style="font-size:0.85rem; color:#666; display:none;"
-                          class="htmx-indicator">Gemini API に問い合わせ中...</span>
+                    <span class="htmx-indicator"><span class="portal-spinner"></span> Gemini API に問い合わせ中...</span>
                 </div>
             </form>
         </div>
@@ -141,7 +106,7 @@
         <div class="card">
             <h2>変換履歴（最新10件）</h2>
             {% if log_entries %}
-            <table>
+            <table class="portal-table">
                 <thead>
                     <tr>
                         <th>日時</th>
@@ -155,19 +120,19 @@
                 <tbody>
                     {% for row in log_entries %}
                     <tr>
-                        <td style="white-space:nowrap; color:#666;">{{ row.datetime or "" }}</td>
+                        <td style="white-space:nowrap;">{{ row.datetime or "" }}</td>
                         <td style="word-break:break-all;">{{ row.filename or "" }}</td>
                         <td>
                             {% if row.status == "完了" %}
-                            <span class="badge badge-ok">完了</span>
+                            <span class="portal-badge portal-badge-ok">完了</span>
                             {% elif row.status == "要確認" %}
-                            <span class="badge badge-warn">要確認</span>
+                            <span class="portal-badge portal-badge-warn">要確認</span>
                             {% else %}
-                            <span class="badge badge-err">{{ row.status or "" }}</span>
+                            <span class="portal-badge portal-badge-err">{{ row.status or "" }}</span>
                             {% endif %}
                         </td>
                         <td>{{ row.cost_yen or "—" }}</td>
-                        <td style="color:#666; font-size:0.78rem;">{{ row.note or "" }}</td>
+                        <td style="font-size:0.78rem;">{{ row.note or "" }}</td>
                         <td>
                             {% set stem = row.filename | replace('.pdf','') if row.filename else "" %}
                             {% if row.status in ["完了","要確認"] and stem %}
@@ -180,28 +145,27 @@
             </table>
             <p class="cost-row">通算コスト: {{ total_cost }} 円</p>
             {% else %}
-            <p style="color:#999; font-size:0.85rem;">変換履歴がありません</p>
+            <p style="color:var(--p-text-tertiary); font-size:0.85rem;">変換履歴がありません</p>
             {% endif %}
         </div>
     </div>
 
+    <footer class="portal-footer">Yossy Portal &copy; 2026</footer>
+
+    <script src="/portal-assets/portal-nav.js"></script>
     <script>
         function updateFilename(input) {
             const display = document.getElementById('filename-display');
             const btn = document.getElementById('submit-btn');
-            const hint = document.querySelector('.upload-hint');
             if (input.files && input.files[0]) {
                 display.textContent = input.files[0].name;
                 display.style.display = 'block';
                 {% if api_ok %}btn.disabled = false;{% endif %}
             } else {
                 display.style.display = 'none';
-                if (hint) hint.style.display = 'block';
                 btn.disabled = true;
             }
         }
-
-        // アップロード完了後にフォームをリセット
         document.getElementById('upload-form').addEventListener('htmx:afterRequest', function() {
             document.getElementById('file-input').value = '';
             document.getElementById('filename-display').style.display = 'none';
