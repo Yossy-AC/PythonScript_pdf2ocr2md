@@ -13,7 +13,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-import google.generativeai as genai
+from google import genai
 from fastapi import FastAPI, File, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
@@ -74,15 +74,17 @@ def _convert_sync(pdf_bytes: bytes, filename: str, prompt: str) -> dict:
     year, university = parse_filename(stem)
     filled_prompt = prompt.replace("{university}", university).replace("{year}", year)
 
-    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
-        tmp.write(pdf_bytes)
-        tmp_path = tmp.name
-
+    tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
     try:
-        scanned = is_scanned_pdf(tmp_path)
-        markdown, in_tok, out_tok = convert_pdf_to_markdown(tmp_path, filled_prompt)
+        tmp.write(pdf_bytes)
+        tmp.close()
+        scanned = is_scanned_pdf(tmp.name)
+        markdown, in_tok, out_tok = convert_pdf_to_markdown(tmp.name, filled_prompt)
     finally:
-        os.unlink(tmp_path)
+        try:
+            os.unlink(tmp.name)
+        except OSError:
+            pass
 
     # コスト計算
     cost_usd = (in_tok * PRICE_INPUT_PER_1M + out_tok * PRICE_OUTPUT_PER_1M) / 1_000_000
@@ -155,8 +157,18 @@ async def upload(request: Request, file: UploadFile = File(...)):
         })
 
     pdf_bytes = await file.read()
+    MAX_UPLOAD_SIZE = 50 * 1024 * 1024  # 50MB
+    if len(pdf_bytes) > MAX_UPLOAD_SIZE:
+        return templates.TemplateResponse("result.html", {
+            "request": request,
+            "error": f"ファイルサイズが上限（50MB）を超えています",
+        })
     prompt = prompt_path.read_text(encoding="utf-8")
-    genai.configure(api_key=GEMINI_API_KEY)
+
+    # convert.py の _client を初期化（Web UI 経由の場合）
+    import convert
+    if convert._client is None:
+        convert._client = genai.Client(api_key=GEMINI_API_KEY)
 
     try:
         result = await asyncio.to_thread(_convert_sync, pdf_bytes, filename, prompt)

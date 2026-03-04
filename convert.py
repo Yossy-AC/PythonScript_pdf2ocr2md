@@ -12,7 +12,8 @@ import pathlib
 import datetime
 
 import fitz  # PyMuPDF
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 from config import (
     GEMINI_API_KEY,
@@ -31,6 +32,8 @@ from config import (
     MIN_OUTPUT_LINES,
 )
 
+_client: genai.Client | None = None
+
 # =============================================
 # 初期化
 # =============================================
@@ -42,7 +45,8 @@ def init():
         print("  設定方法: export GEMINI_API_KEY=your_api_key_here  (Mac/Linux)")
         sys.exit(1)
 
-    genai.configure(api_key=GEMINI_API_KEY)
+    global _client
+    _client = genai.Client(api_key=GEMINI_API_KEY)
     pathlib.Path(OUTPUT_DIR).mkdir(exist_ok=True)
     pathlib.Path(INPUT_DIR).mkdir(exist_ok=True)
 
@@ -125,21 +129,22 @@ def convert_pdf_to_markdown(pdf_path: str, prompt: str) -> tuple[str, int, int]:
     Returns:
         tuple: (markdown_text, input_tokens, output_tokens)
     """
-    model = genai.GenerativeModel(MODEL_NAME)
-
     with open(pdf_path, "rb") as f:
         pdf_bytes = f.read()
 
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            response = model.generate_content([
-                {
-                    "mime_type": "application/pdf",
-                    "data": pdf_bytes,
-                },
-                prompt,
-            ])
-            usage = getattr(response, "usage_metadata", None)
+            response = _client.models.generate_content(
+                model=MODEL_NAME,
+                contents=[
+                    types.Part.from_bytes(data=pdf_bytes, mime_type="application/pdf"),
+                    prompt,
+                ],
+                config=types.GenerateContentConfig(
+                    http_options=types.HttpOptions(timeout=300_000),  # 5分
+                ),
+            )
+            usage = response.usage_metadata
             input_tokens = getattr(usage, "prompt_token_count", 0) or 0
             output_tokens = getattr(usage, "candidates_token_count", 0) or 0
             return response.text, input_tokens, output_tokens
