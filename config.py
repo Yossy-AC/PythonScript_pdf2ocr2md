@@ -2,6 +2,8 @@
 # 設定ファイル。APIキーとパラメータをここで管理する。
 
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 # =============================================
 # APIキー設定
