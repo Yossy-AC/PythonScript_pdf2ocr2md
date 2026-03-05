@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <link rel="icon" href="/favicon.png">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PDF→Markdown 変換</title>
     <script>
@@ -25,15 +25,17 @@
         .upload-area {
             border: 2px dashed var(--p-border);
             border-radius: var(--p-radius-sm);
-            padding: 1.5rem;
+            padding: 2rem 1.5rem;
             text-align: center;
             cursor: pointer;
             transition: all var(--p-transition);
         }
-        .upload-area:hover { border-color: var(--p-accent); background: rgba(0,113,227,0.04); }
-        [data-theme="dark"] .upload-area:hover { background: rgba(41,151,255,0.06); }
+        .upload-area:hover, .upload-area.drag-over { border-color: var(--p-accent); background: rgba(0,113,227,0.06); }
+        [data-theme="dark"] .upload-area:hover, [data-theme="dark"] .upload-area.drag-over { background: rgba(41,151,255,0.08); }
+        .upload-area.drag-over { border-style: solid; }
         .upload-area input[type="file"] { display: none; }
         .upload-area label { display: block; cursor: pointer; color: var(--p-text-secondary); font-size: 0.9rem; }
+        .upload-area .upload-icon { font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5; }
         .upload-area .filename { margin-top: 0.5rem; font-size: 0.85rem; color: var(--p-accent); font-weight: 500; }
         .btn-row { margin-top: 1rem; display: flex; gap: 0.75rem; align-items: center; }
         .cost-row { font-size: 0.8rem; color: var(--p-text-secondary); margin-top: 0.5rem; }
@@ -46,7 +48,7 @@
     <!-- Navigation -->
     <nav class="portal-nav">
         <div class="portal-nav-inner">
-            <a href="/" class="portal-nav-brand"><img src="/portal-assets/logo-penguin.png" alt="Yossy Portal" class="portal-nav-logo"></a>
+            <a href="/" class="portal-nav-brand"><img src="/portal-assets/logo-penguin.svg" alt="Yossy Portal" class="portal-nav-icon"></a>
             <ul class="portal-nav-links">
                 <li><a href="/">ホーム</a></li>
                 <li><a href="/staff/admin">成績管理</a></li>
@@ -85,17 +87,17 @@
                 ファイル名パターン: <code style="background:var(--p-bg-secondary); padding:0.1rem 0.4rem; border-radius:4px;">YYYY大学名_問題.pdf</code><br>
                 変換には数十秒かかります。完了まで待機してください。
             </p>
-            <form hx-post="upload" hx-target="#result" hx-swap="innerHTML"
-                  hx-encoding="multipart/form-data" hx-indicator="#form-indicator" id="upload-form">
-                <div class="upload-area" onclick="document.getElementById('file-input').click()">
-                    <input type="file" id="file-input" name="file" accept=".pdf" onchange="updateFilename(this)">
-                    <label for="file-input" class="upload-hint">クリックして PDF を選択</label>
+            <form id="upload-form">
+                <div class="upload-area" id="upload-area" onclick="document.getElementById('file-input').click()">
+                    <input type="file" id="file-input" name="file" accept=".pdf" multiple onchange="updateFilename(this)">
+                    <div class="upload-icon">📄</div>
+                    <label for="file-input" class="upload-hint">ここにPDFをドロップ、またはクリックして選択</label>
                     <div class="filename" id="filename-display" style="display:none;"></div>
                 </div>
                 <div class="btn-row" id="form-indicator">
                     <button type="submit" class="portal-btn portal-btn-primary" id="submit-btn"
                             {% if not api_ok %}disabled{% else %}disabled{% endif %}>変換する</button>
-                    <span class="htmx-indicator"><span class="portal-spinner"></span> Gemini API に問い合わせ中...</span>
+                    <span id="conv-indicator" style="display:none; align-items:center; gap:0.5rem;"><span class="portal-spinner"></span> <span id="conv-indicator-text">Gemini API に問い合わせ中...</span></span>
                 </div>
             </form>
         </div>
@@ -104,16 +106,25 @@
         <div id="result"></div>
 
         <!-- 変換ログ -->
-        <div class="card">
-            <h2>変換履歴（最新10件）</h2>
+        <div class="card" id="log-card">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
+                <h2 style="margin-bottom:0;">変換履歴（最新50件）</h2>
+                <div style="display:flex; gap:0.5rem;">
+                    {% if log_entries %}
+                    <button onclick="downloadAll()" class="portal-btn portal-btn-secondary" style="font-size:0.82rem; padding:0.3rem 0.75rem;">↓ 一括DL</button>
+                    <button onclick="clearLog()" class="portal-btn portal-btn-secondary" style="font-size:0.82rem; padding:0.3rem 0.75rem; color:var(--p-text-secondary);">履歴クリア</button>
+                    {% endif %}
+                </div>
+            </div>
             {% if log_entries %}
-            <table class="portal-table">
+            <div style="overflow-x:auto;">
+            <table class="portal-table" style="table-layout:auto; width:100%;">
                 <thead>
                     <tr>
-                        <th>日時</th>
-                        <th>ファイル</th>
-                        <th>ステータス</th>
-                        <th>コスト(円)</th>
+                        <th style="white-space:nowrap;">日時</th>
+                        <th style="min-width:200px;">ファイル</th>
+                        <th style="white-space:nowrap;">ステータス</th>
+                        <th style="white-space:nowrap;">コスト(円)</th>
                         <th>備考</th>
                         <th></th>
                     </tr>
@@ -123,7 +134,7 @@
                     <tr>
                         <td style="white-space:nowrap;">{{ row.datetime or "" }}</td>
                         <td style="word-break:break-all;">{{ row.filename or "" }}</td>
-                        <td>
+                        <td style="white-space:nowrap;">
                             {% if row.status == "完了" %}
                             <span class="portal-badge portal-badge-ok">完了</span>
                             {% elif row.status == "要確認" %}
@@ -132,7 +143,7 @@
                             <span class="portal-badge portal-badge-err">{{ row.status or "" }}</span>
                             {% endif %}
                         </td>
-                        <td>{{ row.cost_yen or "—" }}</td>
+                        <td style="white-space:nowrap;">{{ row.cost_yen or "—" }}</td>
                         <td style="font-size:0.78rem;">{{ row.note or "" }}</td>
                         <td>
                             {% set stem = row.filename | replace('.pdf','') if row.filename else "" %}
@@ -144,6 +155,7 @@
                     {% endfor %}
                 </tbody>
             </table>
+            </div>
             <p class="cost-row">通算コスト: {{ total_cost }} 円</p>
             {% else %}
             <p style="color:var(--p-text-tertiary); font-size:0.85rem;">変換履歴がありません</p>
@@ -158,8 +170,9 @@
         function updateFilename(input) {
             const display = document.getElementById('filename-display');
             const btn = document.getElementById('submit-btn');
-            if (input.files && input.files[0]) {
-                display.textContent = input.files[0].name;
+            if (input.files && input.files.length > 0) {
+                const names = Array.from(input.files).map(f => f.name);
+                display.textContent = names.length === 1 ? names[0] : names.length + ' 件選択: ' + names.join(', ');
                 display.style.display = 'block';
                 {% if api_ok %}btn.disabled = false;{% endif %}
             } else {
@@ -167,10 +180,91 @@
                 btn.disabled = true;
             }
         }
-        document.getElementById('upload-form').addEventListener('htmx:afterRequest', function() {
-            document.getElementById('file-input').value = '';
+
+        // Drag & Drop
+        const area = document.getElementById('upload-area');
+        area.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            area.classList.add('drag-over');
+        });
+        area.addEventListener('dragleave', function(e) {
+            if (!area.contains(e.relatedTarget)) area.classList.remove('drag-over');
+        });
+        area.addEventListener('drop', function(e) {
+            e.preventDefault();
+            area.classList.remove('drag-over');
+            const pdfs = Array.from(e.dataTransfer.files).filter(f => f.type === 'application/pdf');
+            if (pdfs.length > 0) {
+                const input = document.getElementById('file-input');
+                const dt = new DataTransfer();
+                pdfs.forEach(f => dt.items.add(f));
+                input.files = dt.files;
+                updateFilename(input);
+            }
+        });
+
+        function clearLog() {
+            if (!confirm('変換履歴を削除しますか？\n（変換済みの .md ファイルは残ります）')) return;
+            fetch('clear-log', { method: 'POST' }).then(function(resp) {
+                if (!resp.ok) { alert('クリアに失敗しました (HTTP ' + resp.status + ')'); return; }
+                const card = document.getElementById('log-card');
+                // テーブル・コスト行・ボタンを除去
+                card.querySelector('div[style*="overflow-x"]')?.remove();
+                card.querySelector('.cost-row')?.remove();
+                card.querySelector('div[style*="justify-content"] div').innerHTML = '';
+                // 「履歴なし」メッセージを表示
+                const msg = document.createElement('p');
+                msg.style.cssText = 'color:var(--p-text-tertiary); font-size:0.85rem;';
+                msg.textContent = '変換履歴がありません';
+                card.appendChild(msg);
+            });
+        }
+
+        function downloadAll() {
+            const links = document.querySelectorAll('a.dl-link');
+            links.forEach(function(link, i) {
+                setTimeout(function() {
+                    const a = document.createElement('a');
+                    a.href = link.href;
+                    a.download = '';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                }, i * 400);
+            });
+        }
+
+        document.getElementById('upload-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const input = document.getElementById('file-input');
+            const files = Array.from(input.files);
+            if (!files.length) return;
+
+            const btn = document.getElementById('submit-btn');
+            const indicator = document.getElementById('conv-indicator');
+            const indicatorText = document.getElementById('conv-indicator-text');
+            const resultDiv = document.getElementById('result');
+
+            btn.disabled = true;
+            indicator.style.display = 'inline-flex';
+            resultDiv.innerHTML = '';
+
+            for (let i = 0; i < files.length; i++) {
+                indicatorText.textContent = files.length > 1
+                    ? '(' + (i + 1) + '/' + files.length + ') ' + files[i].name + ' 変換中...'
+                    : files[i].name + ' 変換中...';
+                const fd = new FormData();
+                fd.append('file', files[i]);
+                const resp = await fetch('upload', { method: 'POST', body: fd });
+                const html = await resp.text();
+                resultDiv.innerHTML += html;
+            }
+
+            indicator.style.display = 'none';
+            indicatorText.textContent = 'Gemini API に問い合わせ中...';
+            input.value = '';
             document.getElementById('filename-display').style.display = 'none';
-            document.getElementById('submit-btn').disabled = true;
+            btn.disabled = true;
         });
     </script>
 </body>

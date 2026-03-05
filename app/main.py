@@ -58,7 +58,7 @@ async def portal_auth(request: Request, call_next):
     return await call_next(request)
 
 
-def _load_log_entries(limit: int = 10) -> list[dict]:
+def _load_log_entries(limit: int = 50) -> list[dict]:
     """conversion_log.csv から最新 N 件を返す"""
     log_path = pathlib.Path(LOG_FILE)
     if not log_path.exists():
@@ -191,6 +191,15 @@ async def upload(request: Request, file: UploadFile = File(...)):
         "md_filename": result["md_filename"],
         "scanned": result["scanned"],
     })
+
+
+@app.post("/clear-log")
+async def clear_log():
+    """conversion_log.csv の内容を消去する（出力 .md は残す）"""
+    log_path = pathlib.Path(LOG_FILE)
+    if log_path.exists():
+        log_path.unlink()
+    return Response(status_code=204)
 
 
 @app.get("/download/{filename}")
