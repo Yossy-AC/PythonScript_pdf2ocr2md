@@ -204,10 +204,14 @@ async def clear_log():
 
 @app.get("/download/{filename}")
 async def download(filename: str):
-    # パストラバーサル防止
-    if any(c in filename for c in ("/", "\\", "..")):
+    import urllib.parse
+    # パストラバーサル防止（URLエンコード含む）
+    decoded = urllib.parse.unquote(filename)
+    if any(c in decoded for c in ("/", "\\", "..")) or decoded != pathlib.Path(decoded).name:
         return Response("Invalid filename", status_code=400)
-    md_path = OUTPUT_PATH / filename
+    md_path = (OUTPUT_PATH / decoded).resolve()
+    if not str(md_path).startswith(str(OUTPUT_PATH.resolve())):
+        return Response("Invalid filename", status_code=400)
     if not md_path.exists() or md_path.suffix != ".md":
         return Response("ファイルが見つかりません", status_code=404)
     return FileResponse(

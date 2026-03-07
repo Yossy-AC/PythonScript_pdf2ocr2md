@@ -180,3 +180,6 @@ def write_log(filename: str, status: str, note: str = "", cost_yen: float = 0.0,
 - **README.md**: ユーザー向け（セットアップ・使用方法）
 - **このファイル**: 開発者向け（実装パターン・メンテナンス）
 - **manual_Tom用.md**: 特定ユーザー向け（操作ガイド）
+
+## 最近の変更（2026年3月）
+- main.py: パストラバーサル強化（`urllib.parse.unquote()`デコード後チェック + `Path.resolve()`正規化）
