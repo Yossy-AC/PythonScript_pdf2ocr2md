@@ -162,7 +162,7 @@ def write_log(filename: str, status: str, note: str = "", cost_yen: float = 0.0,
 
 1. コード一式をコピー
 2. `pip install -r requirements.txt`
-3. `GEMINI_API_KEY` を設定
+3. `Yossy/.env` に `GEMINI_API_KEY` を設定（中央管理）
 4. `python convert.py` 実行
 
 **注意:** `conversion_log.csv` は PC毎に独立。通算コストは各 PC ローカル。複数PC間でコスト共有する場合は別途仕組みが必要。
