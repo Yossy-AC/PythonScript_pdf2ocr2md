@@ -18,6 +18,8 @@ from fastapi import FastAPI, File, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
 
+from yossy_portal_lib import portal_auth_middleware, add_health_endpoint
+
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -50,12 +52,8 @@ templates = Jinja2Templates(directory=str(PROJECT_ROOT / "templates"))
 
 app = FastAPI(title="PDF→Markdown変換")
 
-
-@app.middleware("http")
-async def portal_auth(request: Request, call_next):
-    if os.environ.get("BEHIND_PORTAL") == "true" and request.headers.get("X-Portal-Role"):
-        return await call_next(request)
-    return await call_next(request)
+app.middleware("http")(portal_auth_middleware)
+add_health_endpoint(app)
 
 
 def _load_log_entries(limit: int = 50) -> list[dict]:

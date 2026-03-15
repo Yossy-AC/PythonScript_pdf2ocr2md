@@ -10,4 +10,8 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "python-multipart>=0.0.12",
     "uvicorn>=0.30.0",
+    "yossy-portal-lib",
 ]
+
+[tool.uv.sources]
+yossy-portal-lib = { path = "../yossy-portal/lib" }
