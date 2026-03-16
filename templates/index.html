@@ -5,11 +5,11 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PDF→Markdown 変換</title>
-    <script>
+    <script nonce="{{ request.state.csp_nonce }}">
     (function(){var t=localStorage.getItem("portal-theme");if(!t)t=window.matchMedia&&window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";document.documentElement.setAttribute("data-theme",t)})();
     </script>
     <link rel="stylesheet" href="/portal-assets/portal.css">
-    <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
+    <script nonce="{{ request.state.csp_nonce }}" src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
     <style>
         .page-container { max-width: 800px; margin: 0 auto; padding: 2rem 1.5rem; }
         .page-title { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 0.25rem; }
@@ -163,8 +163,8 @@
 
     <footer class="portal-footer">Yossy Portal &copy; 2026</footer>
 
-    <script src="/portal-assets/portal-nav.js"></script>
-    <script>
+    <script nonce="{{ request.state.csp_nonce }}" src="/portal-assets/portal-nav.js"></script>
+    <script nonce="{{ request.state.csp_nonce }}">
         function updateFilename(input) {
             const display = document.getElementById('filename-display');
             const btn = document.getElementById('submit-btn');
