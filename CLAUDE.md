@@ -180,3 +180,4 @@ def write_log(filename: str, status: str, note: str = "", cost_yen: float = 0.0,
 ## 最近の変更（2026年3月）
 - main.py: パストラバーサル強化（`urllib.parse.unquote()`デコード後チェック + `Path.resolve()`正規化）
 - main.py: 認証ミドルウェア・ヘルスチェックを `yossy-portal-lib` 共有ライブラリに移行
+- main.py + テンプレート: CSP nonceミドルウェア（`csp_middleware`）追加、全`<script>`タグに`nonce`属性付与
