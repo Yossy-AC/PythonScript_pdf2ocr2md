@@ -36,7 +36,7 @@ from config import (
     PROMPT_FILE,
     USD_TO_JPY,
 )
-from convert import (
+from tools.convert import (
     convert_pdf_to_markdown,
     is_scanned_pdf,
     load_log,
@@ -164,9 +164,9 @@ async def upload(request: Request, file: UploadFile = File(...)):
     prompt = prompt_path.read_text(encoding="utf-8")
 
     # convert.py の _client を初期化（Web UI 経由の場合）
-    import convert
-    if convert._client is None:
-        convert._client = genai.Client(api_key=GEMINI_API_KEY)
+    import tools.convert as convert_mod
+    if convert_mod._client is None:
+        convert_mod._client = genai.Client(api_key=GEMINI_API_KEY)
 
     try:
         result = await asyncio.to_thread(_convert_sync, pdf_bytes, filename, prompt)

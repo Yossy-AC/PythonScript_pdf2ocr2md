@@ -16,7 +16,7 @@
 |---|---|---|
 | LLM | Gemini 2.5 Flash | コスト・精度のバランス。lite版（$0.10/$0.40）より推奨 |
 | PDF処理 | PyMuPDF (fitz) | 軽量・高速。スキャン判定用テキスト抽出のみに使用 |
-| 言語 | Python 3.9+ | google-generativeai との互換性 |
+| 言語 | Python 3.12+ | google-generativeai との互換性 |
 | ログ | CSV (DictWriter) | シンプル・手動編集可能 |
 
 ## 重要な実装パターン
@@ -158,14 +158,10 @@ def write_log(filename: str, status: str, note: str = "", cost_yen: float = 0.0,
 **原因:** Gemini の出力トークン数不足か、中断
 **対応:** MIN_OUTPUT_LINES のチェック追加
 
-## 別PCでの運用
+## CLIスクリプト
 
-1. コード一式をコピー
-2. `pip install -r requirements.txt`
-3. `Yossy/.env` に `GEMINI_API_KEY` を設定（中央管理）
-4. `python convert.py` 実行
-
-**注意:** `conversion_log.csv` は PC毎に独立。通算コストは各 PC ローカル。複数PC間でコスト共有する場合は別途仕組みが必要。
+`tools/convert.py` にスタンドアロンCLI版がある（Web UI版 `app/main.py` とは独立）。
+`app/main.py` は `from tools.convert import ...` で同じモジュールを参照する。
 
 ## テスト戦略
 

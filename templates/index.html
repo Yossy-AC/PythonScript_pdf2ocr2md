@@ -48,15 +48,16 @@
     <!-- Navigation -->
     <nav class="portal-nav">
         <div class="portal-nav-inner">
-            <a href="/" class="portal-nav-brand"><img src="/portal-assets/logo-penguin.svg" alt="Yossy Portal" class="portal-nav-icon"></a>
+            <div class="portal-nav-left">
+                <a href="/" class="portal-nav-brand"><img src="/portal-assets/logo-penguin.svg" alt="Yossy Portal" class="portal-nav-icon"></a>
+                <button class="portal-theme-toggle" aria-label="テーマ切替">&#9790;</button>
+            </div>
             <ul class="portal-nav-links">
                 <li><a href="/">ホーム</a></li>
-                <li><a href="/staff/admin">成績管理</a></li>
-                <li><a href="/staff/exam/">国公立大出題分析</a></li>
-                <li><a href="/staff/goukaku/">合格実績</a></li>
-                <li><a href="/auth/logout" class="portal-nav-logout">ログアウト</a></li>
             </ul>
-            <button class="portal-theme-toggle" aria-label="テーマ切替">&#9790;</button>
+            <div class="portal-nav-right">
+                <a href="/auth/logout" class="portal-nav-logout">ログアウト</a>
+            </div>
             <button class="portal-hamburger" aria-label="メニュー" aria-expanded="false">
                 <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 5h14a1 1 0 010 2H3a1 1 0 010-2zm0 4h14a1 1 0 010 2H3a1 1 0 010-2zm0 4h14a1 1 0 010 2H3a1 1 0 010-2z"/></svg>
             </button>
@@ -64,9 +65,6 @@
     </nav>
     <div class="portal-mobile-menu">
         <a href="/">ホーム</a>
-        <a href="/staff/admin">成績管理</a>
-        <a href="/staff/exam/">国公立大出題分析</a>
-        <a href="/staff/goukaku/">合格実績</a>
         <a href="/auth/logout" class="portal-nav-logout">ログアウト</a>
     </div>
 
