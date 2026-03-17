@@ -440,7 +440,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "python-multipart", specifier = ">=0.0.12" },
     { name = "uvicorn", specifier = ">=0.30.0" },
-    { name = "yossy-portal-lib", directory = "../yossy-portal/lib" },
+    { name = "yossy-portal-lib", editable = "../yossy-portal/lib" },
 ]
 
 [[package]]
@@ -741,7 +741,7 @@ wheels = [
 [[package]]
 name = "yossy-portal-lib"
 version = "0.1.0"
-source = { directory = "../yossy-portal/lib" }
+source = { editable = "../yossy-portal/lib" }
 dependencies = [
     { name = "fastapi" },
 ]
